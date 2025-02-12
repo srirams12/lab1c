@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'talker = ros_exercises.simple_publisher:main',
-            'listener = ros_exercises.simple_subscriber:main'
+            'listener = ros_exercises.simple_subscriber:main',
+            'scanner = ros_exercises.fake_scan_publisher:main'
         ],
     },
 )
