@@ -24,11 +24,27 @@ import random
 class FakeScanPublisher(Node):
 
     def __init__(self):
-        super().__init__('fake_scan_publisher')
-        self.publisher_scan = self.create_publisher(LaserScan, 'fake_scan', 10)
+        super().__init__('fake_scan_publisher', allow_undeclared_parameters=True,
+                         automatically_declare_parameters_from_overrides=True)
+
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('topic_name', "fake_scan"),
+                ('publish_rate', 20.0),
+                ('angle_min', (-2/3) * math.pi),
+                ('angle_max', (2/3) * math.pi),
+                ('range_min', 1.0),
+                ('range_max', 10.0),
+                ('angle_increment', (1/300) * math.pi),
+
+            ]
+        )
+
+        self.publisher_scan = self.create_publisher(LaserScan, self.get_parameter('topic_name').value, 10)
         self.publisher_range = self.create_publisher(Float32, 'range_test', 10)
 
-        self.timer_period = 0.05  # seconds
+        self.timer_period = 1.0 / self.get_parameter('publish_rate').value  # seconds
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
 
     def timer_callback(self):
@@ -36,13 +52,14 @@ class FakeScanPublisher(Node):
         # scan.header.stamp = self.get_clock().now()
         scan.header.stamp = rclpy.time.Time().to_msg()
         scan.header.frame_id = 'base_link'
-        scan.angle_min = (-2/3) * math.pi
-        scan.angle_max = (2/3) * math.pi
-        scan.angle_increment = (1/300) * math.pi
+        scan.angle_min = self.get_parameter('angle_min').value
+        scan.angle_max = self.get_parameter('angle_max').value
+        scan.angle_increment = self.get_parameter('angle_increment').value
         scan.scan_time = self.timer_period
-        scan.range_min = 1.0
-        scan.range_max = 10.0
-        scan.ranges = [random.uniform(1.0, 10.0) for _ in range(401)]
+        scan.range_min = self.get_parameter('range_min').value
+        scan.range_max = self.get_parameter('range_max').value
+        num_scans = int((scan.range_max - scan.range_min) / scan.angle_increment) + 1
+        scan.ranges = [random.uniform(scan.range_min, scan.range_max) for _ in range(num_scans)]
 
 
 
@@ -51,7 +68,7 @@ class FakeScanPublisher(Node):
         self.get_logger().info('Publishing: "%s"' % scan.ranges[:10])
 
         range_msg = Float32()
-        range_msg.data = 401.0
+        range_msg.data = float(num_scans)
         self.publisher_range.publish(range_msg)
 
 
